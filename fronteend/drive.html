@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SurakshaPath AI — Driver Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #080b12;
+  --surface:  #131825;
+  --surface2: #161d2e;
+  --border:   rgba(255,255,255,0.06);
+  --border2:  rgba(255,255,255,0.11);
+  --red:      #ff2d2d;
+  --red-dim:  rgba(255,45,45,0.1);
+  --red-glow: rgba(255,45,45,0.2);
+  --green:     #22c55e;
+  --green-dim: rgba(34,197,94,0.1);
+  --amber:     #fbbf24;
+  --amber-dim: rgba(251,191,36,0.1);
+  --blue:      #3b82f6;
+  --blue-dim:  rgba(59,130,246,0.1);
+  --cyan:      #14b8a6;
+  --text:  #e8ecf5;
+  --muted: #6b7a9a;
+  --mono: 'Bebas Neue', sans-serif;
+  --sans: 'Outfit', sans-serif;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+
+.noise {
+  position:fixed; inset:0; z-index:1000; pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity:0.4;
+}
+body { font-family:var(--sans); background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+
+/* ── LOADER ── */
+#loader {
+  position:fixed; inset:0;
+  background: radial-gradient(circle at 50% 40%, rgba(255,45,45,0.09), transparent 55%), linear-gradient(180deg,#080b12,#0d1119);
+  z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:28px;
+  transition:opacity .6s ease;
+}
+#loader.gone { opacity:0; pointer-events:none; display:none; }
+
+.loader-scene { width:360px; max-width:90vw; }
+.road {
+  width:100%; height:90px;
+  background:linear-gradient(180deg,#1e2a38,#141e2a);
+  border-radius:18px; position:relative; overflow:hidden;
+  border:1px solid rgba(255,255,255,0.07);
+  box-shadow:0 20px 40px rgba(0,0,0,0.4);
+}
+.road::before { content:''; position:absolute; left:0; right:0; top:10px; height:6px; background:rgba(255,255,255,0.06); }
+.road::after  { content:''; position:absolute; left:0; right:0; bottom:10px; height:6px; background:rgba(255,255,255,0.06); }
+.road-line { position:absolute; top:50%; left:-200px; width:200%; height:5px; transform:translateY(-50%); background:repeating-linear-gradient(90deg,#ffd54f 0 32px,transparent 32px 62px); animation:roadMove .9s linear infinite; opacity:.9; }
+.ambulance-loader { position:absolute; left:48px; top:14px; width:148px; height:60px; animation:ambBounce .42s ease-in-out infinite alternate; }
+.amb-shadow { position:absolute; left:18px; right:14px; bottom:0; height:8px; background:rgba(0,0,0,.35); filter:blur(5px); border-radius:50%; }
+.amb-vehicle { position:absolute; inset:0; }
+.amb-box { position:absolute; left:18px; top:14px; width:74px; height:26px; border-radius:8px; background:linear-gradient(180deg,#ff4b4b,#c91c1c); border:1.5px solid rgba(255,255,255,.15); box-shadow:0 6px 20px rgba(255,45,45,.35); }
+.amb-cab { position:absolute; left:84px; top:18px; width:34px; height:22px; border-radius:5px 12px 8px 4px; background:linear-gradient(180deg,#ff5252,#b91c1c); border:1.5px solid rgba(255,255,255,.1); }
+.amb-window { position:absolute; left:94px; top:21px; width:16px; height:10px; border-radius:3px; background:linear-gradient(160deg,#e0f4ff,#7ab8d8); opacity:.92; }
+.amb-lightbar { position:absolute; left:58px; top:7px; width:24px; height:7px; border-radius:999px; animation:sirenFlash .42s linear infinite; }
+.amb-cross { position:absolute; left:44px; top:19px; width:16px; height:16px; }
+.amb-cross::before,.amb-cross::after { content:''; position:absolute; background:rgba(255,255,255,.95); border-radius:2px; }
+.amb-cross::before { left:6px; top:0; width:4px; height:16px; }
+.amb-cross::after  { left:0; top:6px; width:16px; height:4px; }
+.amb-stripe { position:absolute; left:22px; top:32px; width:64px; height:4px; border-radius:999px; background:rgba(255,255,255,.88); }
+.wheel { position:absolute; bottom:5px; width:16px; height:16px; background:#0a1220; border-radius:50%; border:2.5px solid #8fa3b8; animation:wheelSpin .38s linear infinite; }
+.wheel::after { content:''; position:absolute; inset:3px; border-radius:50%; background:radial-gradient(circle at 40% 35%,#c8d8e8,#6b8aaa); }
+.wheel-1 { left:28px; } .wheel-2 { left:96px; }
+
+.loader-text-wrap { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.loader-title { font-family:var(--mono); font-size:26px; color:var(--red); letter-spacing:4px; text-align:center; text-shadow:0 0 30px rgba(255,45,45,.5); transition:all .5s ease; }
+.loader-sub { font-family:var(--sans); font-size:13px; color:var(--muted); letter-spacing:.5px; text-align:center; animation:subPulse 1.8s ease-in-out infinite; }
+.loader-bar-wrap { width:260px; max-width:80vw; height:3px; background:rgba(255,255,255,.06); border-radius:999px; overflow:hidden; }
+.loader-bar-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--red),var(--amber)); width:0%; animation:loadBar 2.2s ease-out forwards; }
+
+@keyframes roadMove   { from{transform:translateY(-50%) translateX(0)} to{transform:translateY(-50%) translateX(-62px)} }
+@keyframes ambBounce  { from{transform:translateY(0)} to{transform:translateY(-4px)} }
+@keyframes wheelSpin  { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+@keyframes sirenFlash { 0%{background:#60a5fa;box-shadow:0 0 14px rgba(96,165,250,.7)} 50%{background:#ff2d2d;box-shadow:0 0 14px rgba(255,45,45,.7)} 100%{background:#60a5fa;box-shadow:0 0 14px rgba(96,165,250,.7)} }
+@keyframes subPulse   { 0%,100%{opacity:.35} 50%{opacity:.9} }
+@keyframes loadBar    { 0%{width:0%} 70%{width:80%} 90%{width:95%} 100%{width:100%} }
+
+/* ── LAYOUT ── */
+.app { position:relative; z-index:1; display:grid; grid-template-columns:440px 1fr; min-height:100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar { background:rgba(8,11,18,0.97); backdrop-filter:blur(20px); border-right:1px solid var(--border2); display:flex; flex-direction:column; overflow-y:auto; }
+.sidebar-header { padding:20px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; position:sticky; top:0; background:rgba(8,11,18,0.99); backdrop-filter:blur(24px); z-index:10; }
+.logo-mark { width:42px; height:42px; border-radius:12px; background:rgba(255,45,45,0.08); display:flex; align-items:center; justify-content:center; box-shadow:0 0 20px var(--red-glow); border:1px solid rgba(255,45,45,0.18); animation:sirenGlow 2s ease-in-out infinite; flex-shrink:0; }
+.logo-mark svg { width:20px; height:20px; }
+.logo-text { flex:1; }
+.logo-text h1 { font-size:15px; font-weight:600; letter-spacing:-.2px; }
+.logo-text p  { font-size:11px; color:var(--muted); font-family:var(--mono); }
+.online-badge { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--green); font-family:var(--mono); }
+.online-dot   { width:7px; height:7px; border-radius:50%; background:var(--green); animation:pulse-dot 2s infinite; }
+
+.unit-card { margin:16px; padding:14px; background:var(--surface); border:1px solid var(--border2); border-radius:16px; }
+.unit-row  { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.unit-avatar { width:42px; height:42px; border-radius:50%; background:var(--blue-dim); border:1.5px solid var(--blue); display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:13px; color:var(--blue); font-weight:700; }
+.unit-name { font-size:14px; font-weight:600; }
+.unit-id   { font-size:11px; color:var(--muted); font-family:var(--mono); margin-top:1px; }
+.stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.stat-box  { background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:10px 8px; text-align:center; }
+.stat-box .val { font-size:18px; font-weight:700; font-family:var(--mono); }
+.stat-box .key { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+.stat-box.amber .val { color:var(--amber); }
+.stat-box.green .val { color:var(--green); }
+.stat-box.blue  .val { color:var(--blue); }
+
+.sec-label { font-size:10px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:1px; padding:0 16px; margin-bottom:10px; }
+
+.emg-wrap { padding:0 16px 16px; }
+.emg-card { border-radius:18px; border:1px solid rgba(255,45,45,0.35); background:linear-gradient(135deg,#140808,#0b0d12); overflow:hidden; position:relative; box-shadow:0 0 40px rgba(255,45,45,0.08); }
+.emg-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--red),var(--amber),var(--red),transparent); background-size:300% 100%; animation:scanline 2s linear infinite; }
+.emg-top { padding:14px 14px 10px; display:flex; align-items:center; justify-content:space-between; }
+.critical-badge { font-size:10px; font-weight:700; font-family:var(--mono); letter-spacing:1.5px; color:var(--red); border:1px solid var(--red); border-radius:4px; padding:3px 8px; animation:badge-blink 1.2s ease-in-out infinite; }
+.timer-wrap { text-align:right; }
+.timer-num { font-size:28px; font-weight:700; font-family:var(--mono); color:var(--amber); line-height:1; transition:color .3s; }
+.timer-num.urgent { color:var(--red); }
+.timer-lbl { font-size:10px; color:var(--muted); }
+.emg-location { margin:0 14px 12px; padding:11px; background:rgba(255,59,59,0.07); border:1px solid rgba(255,59,59,0.2); border-radius:10px; display:flex; gap:10px; align-items:flex-start; }
+.loc-pin { width:30px; height:30px; border-radius:8px; background:var(--red-dim); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.loc-pin svg { width:15px; height:15px; fill:var(--red); }
+.loc-title { font-size:13px; font-weight:600; line-height:1.3; }
+.loc-sub   { font-size:11px; color:var(--muted); margin-top:3px; }
+.emg-chips { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 14px 14px; }
+.chip { background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:8px; padding:8px 10px; }
+.chip span { display:block; font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; }
+.chip b { font-size:13px; font-family:var(--mono); font-weight:700; }
+.btn-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 14px 14px; }
+.btn-accept { background:var(--red); border:none; color:#fff; font-size:13px; font-weight:700; font-family:var(--sans); letter-spacing:.5px; padding:13px; border-radius:999px; cursor:pointer; transition:all .2s ease; text-transform:uppercase; box-shadow:0 0 20px var(--red-glow); }
+.btn-accept:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 30px rgba(255,45,45,.35); }
+.btn-accept:disabled { opacity:.35; cursor:not-allowed; transform:none; box-shadow:none; }
+.btn-reject { background:transparent; border:1px solid var(--border2); color:var(--muted); font-size:13px; font-weight:700; font-family:var(--sans); letter-spacing:.5px; padding:13px; border-radius:999px; cursor:pointer; transition:all .2s ease; text-transform:uppercase; }
+.btn-reject:hover:not(:disabled) { border-color:rgba(255,45,45,.35); color:var(--red); }
+.btn-reject:disabled { opacity:.35; cursor:not-allowed; }
+
+.status-wrap { padding:0 16px 16px; }
+.status-card { background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:14px; }
+.status-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.status-indicator { display:flex; align-items:center; gap:8px; }
+.s-dot { width:10px; height:10px; border-radius:50%; transition:background .3s; }
+.s-dot.idle    { background:var(--muted); }
+.s-dot.active  { background:var(--green); animation:pulse-dot 1.5s infinite; }
+.s-dot.enroute { background:var(--amber); animation:pulse-dot 1.5s infinite; }
+.s-name { font-size:14px; font-weight:600; }
+.s-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
+.s-time { font-size:11px; font-family:var(--mono); color:var(--muted); }
+.prog-track { height:3px; background:var(--border); border-radius:999px; overflow:hidden; }
+.prog-fill  { height:100%; background:var(--blue); border-radius:999px; width:0%; transition:width .6s cubic-bezier(.4,0,.2,1); }
+
+.signals-wrap { padding:0 16px 16px; }
+.signals-card { background:var(--surface); border:1px solid var(--border2); border-radius:16px; padding:14px; }
+.signals-title { font-size:13px; font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+.signals-grid  { display:flex; gap:8px; }
+.sig { flex:1; text-align:center; padding:10px 6px; background:var(--bg); border:1px solid var(--border); border-radius:10px; }
+.sig-dot { width:14px; height:14px; border-radius:50%; margin:0 auto 6px; }
+.sig-dot.green { background:var(--green); box-shadow:0 0 8px var(--green); }
+.sig-dot.amber { background:var(--amber); box-shadow:0 0 8px var(--amber); }
+.sig-dot.red   { background:var(--red);   box-shadow:0 0 8px var(--red); }
+.sig-lbl { font-size:10px; color:var(--muted); font-family:var(--mono); }
+
+/* PATIENT PICKUP */
+.pickup-wrap { padding:0 16px 16px; display:none; }
+.pickup-wrap.visible { display:block; }
+.btn-pickup {
+  width:100%; background:linear-gradient(135deg,#16a34a,#15803d);
+  border:none; color:white; font-size:13px; font-weight:700; font-family:var(--sans);
+  letter-spacing:.5px; padding:14px; border-radius:999px; cursor:pointer;
+  transition:all .2s ease; text-transform:uppercase;
+  box-shadow:0 0 20px rgba(34,197,94,0.3);
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  animation:pickupPulse 2s ease-in-out infinite;
+}
+.btn-pickup:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 8px 30px rgba(34,197,94,0.4); }
+.btn-pickup:disabled { opacity:.5; cursor:not-allowed; transform:none; animation:none; }
+@keyframes pickupPulse { 0%,100%{box-shadow:0 0 20px rgba(34,197,94,0.3)} 50%{box-shadow:0 0 36px rgba(34,197,94,0.55)} }
+
+/* HOSPITAL PANEL */
+.hosp-wrap { padding:0 16px 24px; display:none; }
+.hosp-wrap.visible { display:block; }
+.hosp-card { background:var(--surface); border:1px solid var(--border2); border-radius:16px; padding:14px; }
+.hosp-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.hosp-title  { font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px; }
+.hosp-scanning { font-size:10px; font-family:var(--mono); color:var(--cyan); animation:badge-blink 1s infinite; }
+.hosp-list { display:flex; flex-direction:column; gap:8px; }
+.hosp-item { background:var(--bg); border:1px solid var(--border); border-radius:12px; padding:11px 12px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:all .2s ease; opacity:0; transform:translateY(8px); }
+.hosp-item.show { animation:hospFadeIn .4s ease forwards; }
+.hosp-item:hover { border-color:var(--green); background:rgba(34,197,94,0.05); }
+.hosp-item.selected { border-color:var(--green); background:rgba(34,197,94,0.09); box-shadow:0 0 16px rgba(34,197,94,0.14); }
+@keyframes hospFadeIn { to { opacity:1; transform:translateY(0); } }
+.hosp-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:16px; }
+.hosp-icon.green { background:var(--green-dim); border:1px solid rgba(34,197,94,0.2); }
+.hosp-icon.amber { background:var(--amber-dim); border:1px solid rgba(251,191,36,0.2); }
+.hosp-info { flex:1; min-width:0; }
+.hosp-name { font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hosp-meta { font-size:10px; color:var(--muted); margin-top:2px; }
+.hosp-stat { text-align:right; flex-shrink:0; }
+.hosp-dist { font-size:12px; font-weight:700; font-family:var(--mono); color:var(--cyan); }
+.hosp-beds { font-size:10px; color:var(--muted); margin-top:2px; }
+.hosp-badge { font-size:9px; font-weight:700; font-family:var(--mono); padding:2px 6px; border-radius:4px; letter-spacing:.5px; }
+.hosp-badge.available { background:var(--green-dim); color:var(--green); border:1px solid rgba(34,197,94,0.2); }
+.hosp-badge.limited   { background:var(--amber-dim); color:var(--amber); border:1px solid rgba(251,191,36,0.2); }
+
+.perf-wrap { padding:0 16px 24px; }
+.perf-card { background:var(--surface); border:1px solid var(--border2); border-radius:16px; padding:14px; }
+.perf-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.perf-title { font-size:13px; font-weight:600; }
+.tier-pill { font-size:10px; font-weight:700; font-family:var(--mono); padding:3px 8px; border-radius:999px; background:var(--amber-dim); color:var(--amber); border:1px solid rgba(255,171,0,.3); letter-spacing:.5px; }
+.bar-rows { display:flex; flex-direction:column; gap:10px; }
+.bar-row  { display:flex; align-items:center; gap:10px; }
+.bar-lbl  { font-size:11px; color:var(--muted); width:58px; flex-shrink:0; }
+.bar-track{ flex:1; height:5px; background:var(--border); border-radius:999px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:999px; width:0%; transition:width 1.2s cubic-bezier(.4,0,.2,1); }
+.bar-val  { font-size:11px; font-family:var(--mono); color:var(--text); width:30px; text-align:right; flex-shrink:0; }
+
+/* ── MAIN MAP ── */
+.main { position:relative; overflow:hidden; background:var(--bg); }
+.topbar { position:absolute; top:0; left:0; right:0; z-index:10; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; background:rgba(8,11,18,0.85); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); }
+.topbar-left { display:flex; gap:8px; flex-wrap:wrap; }
+.top-chip { display:flex; align-items:center; gap:6px; background:rgba(19,24,37,0.9); border:1px solid var(--border2); border-radius:999px; padding:5px 12px; font-size:11px; font-family:var(--sans); color:var(--text); backdrop-filter:blur(8px); }
+.top-chip .dot { width:6px; height:6px; border-radius:50%; }
+#map-canvas { width:100%; height:100%; display:block; }
+
+#scan-overlay { position:absolute; inset:0; z-index:5; pointer-events:none; display:none; background:radial-gradient(circle at 50% 50%,rgba(20,184,166,0.07),transparent 65%); }
+#scan-overlay.active { display:block; }
+.scan-ring { position:absolute; top:50%; left:50%; width:80px; height:80px; border-radius:50%; border:2px solid rgba(20,184,166,0.5); transform:translate(-50%,-50%); animation:scanExpand 1.6s ease-out infinite; }
+.scan-ring:nth-child(2) { animation-delay:.53s; }
+.scan-ring:nth-child(3) { animation-delay:1.06s; }
+@keyframes scanExpand { 0%{width:40px;height:40px;opacity:.8} 100%{width:320px;height:320px;opacity:0} }
+
+.map-overlay { position:absolute; bottom:24px; right:20px; z-index:10; display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
+.ov-card { background:rgba(8,11,18,0.92); border:1px solid var(--border2); border-radius:14px; padding:12px 16px; backdrop-filter:blur(12px); min-width:200px; }
+.ov-label { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:4px; }
+.ov-value { font-size:22px; font-weight:700; font-family:var(--mono); }
+.ov-sub   { font-size:11px; color:var(--muted); margin-top:2px; }
+.ov-card.eta   .ov-value { color:var(--cyan); }
+.ov-card.speed .ov-value { color:var(--green); }
+
+.route-panel { position:absolute; top:68px; left:20px; z-index:10; background:rgba(8,11,18,0.92); border:1px solid var(--border2); border-radius:14px; padding:14px 16px; backdrop-filter:blur(12px); min-width:220px; display:none; }
+.route-panel.visible { display:block; }
+.route-title { font-size:12px; font-weight:600; margin-bottom:10px; color:var(--cyan); font-family:var(--mono); }
+.route-step  { display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; font-size:12px; }
+.route-num   { width:18px; height:18px; border-radius:50%; background:var(--blue-dim); border:1px solid var(--blue); display:flex; align-items:center; justify-content:center; font-size:10px; font-family:var(--mono); color:var(--blue); flex-shrink:0; }
+.route-step.active .route-num { background:var(--green); border-color:var(--green); color:#000; }
+.route-text { color:var(--text); line-height:1.4; }
+.route-text small { color:var(--muted); display:block; }
+
+.toast { position:absolute; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface); border:1px solid var(--border2); border-radius:12px; padding:12px 20px; font-size:13px; font-family:var(--mono); z-index:50; opacity:0; pointer-events:none; transition:all .3s ease; white-space:nowrap; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+@keyframes spin       { to{transform:rotate(360deg)} }
+@keyframes sirenGlow  { 0%,100%{box-shadow:0 0 16px var(--red-glow)} 50%{box-shadow:0 0 30px var(--red-glow),0 0 60px rgba(255,59,59,.15)} }
+@keyframes pulse-dot  { 0%{box-shadow:0 0 0 0 currentColor} 70%{box-shadow:0 0 0 6px transparent} 100%{box-shadow:0 0 0 0 transparent} }
+@keyframes badge-blink{ 0%,100%{opacity:1} 50%{opacity:.5} }
+@keyframes scanline   { 0%{background-position:0% 0%} 100%{background-position:300% 0%} }
+@keyframes fadeUp     { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+.fade-up { animation:fadeUp .5s ease forwards; }
+
+@media (max-width:768px) {
+  .app { grid-template-columns:1fr; grid-template-rows:auto 400px; }
+  .main { min-height:400px; }
+}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+
+<div id="loader">
+  <div class="loader-scene">
+    <div class="road">
+      <div class="road-line"></div>
+      <div class="ambulance-loader">
+        <div class="amb-shadow"></div>
+        <div class="amb-vehicle">
+          <div class="amb-lightbar"></div>
+          <div class="amb-box"></div>
+          <div class="amb-cab"></div>
+          <div class="amb-window"></div>
+          <div class="amb-cross"></div>
+          <div class="amb-stripe"></div>
+          <div class="wheel wheel-1"></div>
+          <div class="wheel wheel-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="loader-text-wrap">
+    <div class="loader-title" id="loader-title">INITIALIZING…</div>
+    <div class="loader-sub"   id="loader-sub">Setting up dispatch system</div>
+  </div>
+  <div class="loader-bar-wrap"><div class="loader-bar-fill"></div></div>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+
+    <div class="sidebar-header">
+      <div class="logo-mark">
+        <svg viewBox="0 0 36 36" fill="none">
+          <polygon points="18,2 33,10 33,26 18,34 3,26 3,10" stroke="#ff2d2d" stroke-width="1.5" fill="none"/>
+          <line x1="18" y1="10" x2="18" y2="26" stroke="#ff2d2d" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="10" y1="18" x2="26" y2="18" stroke="#ff2d2d" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>SurakshaPath AI</h1>
+        <p>DRIVER PORTAL v2.1</p>
+      </div>
+      <div class="online-badge"><div class="online-dot"></div>LIVE</div>
+    </div>
+
+    <div class="unit-card fade-up" style="animation-delay:.1s">
+      <div class="unit-row">
+        <div class="unit-avatar">RK</div>
+        <div>
+          <div class="unit-name">Ravi Kumar</div>
+          <div class="unit-id">UNIT AMB-047 · Zone South</div>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box amber"><div class="val">4.8</div><div class="key">Rating</div></div>
+        <div class="stat-box green"><div class="val" id="jobs-count">12</div><div class="key">Jobs</div></div>
+        <div class="stat-box blue"><div class="val">78%</div><div class="key">Score</div></div>
+      </div>
+    </div>
+
+    <div class="sec-label">Incoming emergency</div>
+    <div class="emg-wrap fade-up" style="animation-delay:.2s">
+      <div class="emg-card">
+        <div class="emg-top">
+          <div class="critical-badge" id="priority-badge">P1 CRITICAL</div>
+          <div class="timer-wrap">
+            <div class="timer-num" id="timer">30</div>
+            <div class="timer-lbl">seconds</div>
+          </div>
+        </div>
+        <div class="emg-location">
+          <div class="loc-pin">
+            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+          </div>
+          <div>
+            <div class="loc-title" id="job-title">Road accident — MG Road Junction</div>
+            <div class="loc-sub"  id="job-sub">Victoria Hospital → MG Road, Bengaluru</div>
+          </div>
+        </div>
+        <div class="emg-chips">
+          <div class="chip"><span>Distance</span><b id="chip-dist">3.2 km</b></div>
+          <div class="chip"><span>ETA</span><b id="chip-eta">~7 min</b></div>
+          <div class="chip"><span>Priority</span><b id="chip-prio" style="color:var(--red)">P1 Critical</b></div>
+          <div class="chip"><span>Signals</span><b id="chip-sig" style="color:var(--green)">Cleared</b></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn-accept" id="btn-accept" onclick="acceptJob()">ACCEPT</button>
+          <button class="btn-reject" id="btn-reject" onclick="rejectJob()">DECLINE</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-label">Unit status</div>
+    <div class="status-wrap fade-up" style="animation-delay:.3s">
+      <div class="status-card">
+        <div class="status-header">
+          <div class="status-indicator">
+            <div class="s-dot idle" id="s-dot"></div>
+            <div>
+              <div class="s-name" id="s-name">Standby</div>
+              <div class="s-sub"  id="s-sub">Awaiting dispatch</div>
+            </div>
+          </div>
+          <div class="s-time" id="s-time">—</div>
+        </div>
+        <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="sec-label">Signal corridor</div>
+    <div class="signals-wrap fade-up" style="animation-delay:.35s">
+      <div class="signals-card">
+        <div class="signals-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--cyan)"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Active route signals
+        </div>
+        <div class="signals-grid" id="signals-grid">
+          <div class="sig"><div class="sig-dot green"></div><div class="sig-lbl">SIG-1</div></div>
+          <div class="sig"><div class="sig-dot green"></div><div class="sig-lbl">SIG-2</div></div>
+          <div class="sig"><div class="sig-dot amber"></div><div class="sig-lbl">SIG-3</div></div>
+          <div class="sig"><div class="sig-dot green"></div><div class="sig-lbl">SIG-4</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PATIENT PICKUP — shown after arriving at scene -->
+    <div class="pickup-wrap" id="pickup-wrap">
+      <button class="btn-pickup" id="btn-pickup" onclick="patientPickedUp()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        Patient Picked Up
+      </button>
+    </div>
+
+    <!-- NEARBY HOSPITALS — shown after pickup -->
+    <div class="sec-label" id="hosp-label" style="display:none">Nearby hospitals</div>
+    <div class="hosp-wrap" id="hosp-wrap">
+      <div class="hosp-card">
+        <div class="hosp-header">
+          <div class="hosp-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--green)"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+            AI Hospital Match
+          </div>
+          <div class="hosp-scanning" id="hosp-scanning">SCANNING…</div>
+        </div>
+        <div class="hosp-list" id="hosp-list"></div>
+      </div>
+    </div>
+
+    <div class="sec-label">Performance</div>
+    <div class="perf-wrap fade-up" style="animation-delay:.4s">
+      <div class="perf-card">
+        <div class="perf-header">
+          <div class="perf-title">This month</div>
+          <div class="tier-pill">SILVER TIER</div>
+        </div>
+        <div class="bar-rows">
+          <div class="bar-row"><div class="bar-lbl">Rating</div><div class="bar-track"><div class="bar-fill" id="b1" style="background:var(--amber)"></div></div><div class="bar-val">4.8★</div></div>
+          <div class="bar-row"><div class="bar-lbl">Score</div><div class="bar-track"><div class="bar-fill" id="b2" style="background:var(--blue)"></div></div><div class="bar-val">78%</div></div>
+          <div class="bar-row"><div class="bar-lbl">Accept</div><div class="bar-track"><div class="bar-fill" id="b3" style="background:var(--green)"></div></div><div class="bar-val">91%</div></div>
+          <div class="bar-row"><div class="bar-lbl">On-time</div><div class="bar-track"><div class="bar-fill" id="b4" style="background:var(--cyan)"></div></div><div class="bar-val">88%</div></div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="top-chip"><div class="dot" style="background:var(--green)"></div>GPS LOCK</div>
+        <div class="top-chip"><div class="dot" style="background:var(--cyan)"></div>AI ROUTING ON</div>
+        <div class="top-chip" id="reroute-chip" style="display:none"><div class="dot" style="background:var(--red);animation:pulse-dot 1s infinite"></div>REROUTING...</div>
+      </div>
+      <div class="top-chip" id="time-chip">--:--:--</div>
+    </div>
+
+    <canvas id="map-canvas"></canvas>
+
+    <div id="scan-overlay">
+      <div class="scan-ring"></div>
+      <div class="scan-ring"></div>
+      <div class="scan-ring"></div>
+    </div>
+
+    <div class="route-panel" id="route-panel">
+      <div class="route-title" id="route-title">ACTIVE ROUTE</div>
+      <div class="route-step active" id="rs1">
+        <div class="route-num">1</div>
+        <div class="route-text">Victoria Hospital exit<small>Turn right on Hosur Rd</small></div>
+      </div>
+      <div class="route-step" id="rs2">
+        <div class="route-num">2</div>
+        <div class="route-text">Silk Board flyover<small>Keep left, stay on ORR</small></div>
+      </div>
+      <div class="route-step" id="rs3">
+        <div class="route-num">3</div>
+        <div class="route-text">MG Road junction<small>Destination on right</small></div>
+      </div>
+    </div>
+
+    <div class="map-overlay">
+      <div class="ov-card eta">
+        <div class="ov-label">ETA to scene</div>
+        <div class="ov-value" id="ov-eta">—</div>
+        <div class="ov-sub"   id="ov-eta-sub">Waiting for dispatch</div>
+      </div>
+      <div class="ov-card speed">
+        <div class="ov-label">Current speed</div>
+        <div class="ov-value" id="ov-speed">0 <span style="font-size:14px">km/h</span></div>
+        <div class="ov-sub"   id="ov-speed-sub">Unit stationary</div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </main>
+</div>
+
+<script>
+// ── MAP ──────────────────────────────────────────────────────────
+const canvas = document.getElementById('map-canvas');
+const ctx    = canvas.getContext('2d');
+function resize(){ canvas.width=canvas.offsetWidth; canvas.height=canvas.offsetHeight; }
+window.addEventListener('resize',()=>{ resize(); initMap(); });
+resize();
+
+let animFrame    = 0;
+let ambulancePos = {x:.35,y:.6};
+let targetPos    = {x:.65,y:.35};
+let routeActive  = false;
+let routeProgress= 0;
+let buildings=[], signals=[], routePath=[];
+let hospitalMarkers=[], selectedHospital=null;
+
+function initMap(){
+  buildings=[];
+  for(let i=0;i<50;i++) buildings.push({x:Math.random()*.88+.06,y:Math.random()*.88+.06,w:Math.random()*.055+.025,h:Math.random()*.055+.025});
+  signals=[{x:.42,y:.53,state:'green'},{x:.52,y:.47,state:'green'},{x:.58,y:.40,state:'amber'},{x:.63,y:.37,state:'green'}];
+  routePath=[{x:.35,y:.60},{x:.40,y:.56},{x:.45,y:.52},{x:.52,y:.46},{x:.58,y:.40},{x:.63,y:.36},{x:.65,y:.35}];
+}
+
+function drawMap(){
+  const W=canvas.width,H=canvas.height;
+  ctx.fillStyle='#08090f'; ctx.fillRect(0,0,W,H);
+
+  ctx.strokeStyle='rgba(59,130,246,0.055)'; ctx.lineWidth=.5;
+  for(let x=0;x<W;x+=W*.09){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=H*.09){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  ctx.strokeStyle='#131e2e'; ctx.lineWidth=16; ctx.lineCap='round';
+  [[0,H*.5,W,H*.5],[W*.5,0,W*.5,H],[W*.25,H,W*.75,0],[W*.1,0,W*.42,H]].forEach(([x1,y1,x2,y2])=>{
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  });
+  ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=1;ctx.setLineDash([18,14]);
+  ctx.beginPath();ctx.moveTo(0,H*.5);ctx.lineTo(W,H*.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(W*.5,0);ctx.lineTo(W*.5,H);ctx.stroke();
+  ctx.setLineDash([]);
+
+  buildings.forEach(b=>{
+    ctx.fillStyle='#0d1828';ctx.strokeStyle='#162038';ctx.lineWidth=.5;
+    ctx.beginPath();ctx.roundRect(b.x*W,b.y*H,b.w*W,b.h*H,3);ctx.fill();ctx.stroke();
+  });
+
+  if(routeActive&&routePath.length>1){
+    const ci=Math.floor(routeProgress*(routePath.length-1));
+    ctx.strokeStyle='rgba(59,130,246,0.10)';ctx.lineWidth=18;ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();ctx.moveTo(routePath[0].x*W,routePath[0].y*H);routePath.forEach(p=>ctx.lineTo(p.x*W,p.y*H));ctx.stroke();
+    ctx.strokeStyle='rgba(59,130,246,0.22)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(routePath[0].x*W,routePath[0].y*H);routePath.forEach(p=>ctx.lineTo(p.x*W,p.y*H));ctx.stroke();
+    ctx.strokeStyle='#14b8a6';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(routePath[0].x*W,routePath[0].y*H);
+    for(let i=1;i<=Math.min(ci+1,routePath.length-1);i++)ctx.lineTo(routePath[i].x*W,routePath[i].y*H);ctx.stroke();
+    ctx.strokeStyle='rgba(20,184,166,0.65)';ctx.lineWidth=2;ctx.setLineDash([6,14]);ctx.lineDashOffset=-(animFrame*.6);
+    ctx.beginPath();ctx.moveTo(routePath[0].x*W,routePath[0].y*H);routePath.forEach(p=>ctx.lineTo(p.x*W,p.y*H));ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  const SCOLS={green:'#22c55e',amber:'#fbbf24',red:'#ff2d2d'};
+  signals.forEach((s,i)=>{
+    const col=SCOLS[s.state]||'#fff';
+    ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=14;
+    ctx.beginPath();ctx.arc(s.x*W,s.y*H,5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font='9px monospace';ctx.textAlign='center';
+    ctx.fillText('S'+(i+1),s.x*W,s.y*H-10);
+  });
+
+  if(routeActive){
+    const ix=targetPos.x*W,iy=targetPos.y*H,p=Math.sin(animFrame*.06)*7+16;
+    ctx.strokeStyle='rgba(255,45,45,0.22)';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(ix,iy,p,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='#ff2d2d';ctx.shadowColor='#ff2d2d';ctx.shadowBlur=18;ctx.beginPath();ctx.arc(ix,iy,6,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(8,9,15,0.9)';ctx.beginPath();ctx.roundRect(ix-38,iy-36,76,18,4);ctx.fill();
+    ctx.fillStyle='#ff2d2d';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText('INCIDENT',ix,iy-22);
+  }
+
+  // hospital markers
+  hospitalMarkers.forEach((h,i)=>{
+    const hx=h.pos.x*W,hy=h.pos.y*H,isSel=selectedHospital&&selectedHospital.name===h.name;
+    const col=isSel?'#22c55e':(h.tier==='green'?'#14b8a6':'#fbbf24');
+    const pulse=Math.sin(animFrame*.07+i)*5+16;
+    ctx.strokeStyle=col+'44';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(hx,hy,pulse,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle=col;ctx.shadowColor=col;ctx.shadowBlur=isSel?22:10;
+    ctx.beginPath();ctx.arc(hx,hy,isSel?12:8,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.fillStyle='#fff';ctx.fillRect(hx-4,hy-1.5,8,3);ctx.fillRect(hx-1.5,hy-4,3,8);
+    ctx.fillStyle='rgba(8,9,15,0.9)';ctx.beginPath();ctx.roundRect(hx-44,hy+15,88,18,4);ctx.fill();
+    ctx.fillStyle=col;ctx.font=isSel?'bold 10px Outfit':'10px Outfit';ctx.textAlign='center';
+    ctx.fillText(h.name.length>15?h.name.slice(0,15)+'…':h.name,hx,hy+27);
+  });
+
+  // ambulance
+  const ax=ambulancePos.x*W,ay=ambulancePos.y*H;
+  ctx.fillStyle='rgba(255,45,45,0.07)';ctx.beginPath();ctx.arc(ax,ay,Math.sin(animFrame*.08)*4+20,0,Math.PI*2);ctx.fill();
+  ctx.save();ctx.translate(ax,ay);
+  ctx.fillStyle='rgba(0,0,0,0.28)';ctx.beginPath();ctx.ellipse(0,11,14,5,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#ff2d2d';ctx.shadowColor='#ff2d2d';ctx.shadowBlur=16;ctx.beginPath();ctx.roundRect(-14,-9,19,18,5);ctx.fill();
+  ctx.fillStyle='#cc1f1f';ctx.beginPath();ctx.roundRect(3,-7,13,14,4);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle='#c8ecff';ctx.beginPath();ctx.roundRect(7,-4,6,8,2);ctx.fill();
+  ctx.fillStyle=animFrame%18<9?'#60a5fa':'#ff2d2d';ctx.shadowColor=animFrame%18<9?'#60a5fa':'#ff2d2d';ctx.shadowBlur=10;
+  ctx.beginPath();ctx.roundRect(-4,-12,8,3,2);ctx.fill();ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';ctx.fillRect(-8,-4,4,8);ctx.fillRect(-10,-2,8,4);
+  ctx.fillStyle='#050a14';[[-8,-11],[-8,11],[10,-8],[10,8]].forEach(([wx,wy])=>{ctx.beginPath();ctx.arc(wx,wy,3.5,0,Math.PI*2);ctx.fill();});
+  ctx.restore();
+  ctx.fillStyle='rgba(8,9,15,0.94)';ctx.beginPath();ctx.roundRect(ax-36,ay+18,72,18,4);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.8)';ctx.font='10px Outfit,sans-serif';ctx.textAlign='center';ctx.fillText('UNIT AMB-047',ax,ay+30);
+
+  animFrame++;
+}
+
+// ── STATE ────────────────────────────────────────────────────────
+// phase: 'idle' | 'enroute_scene' | 'on_scene' | 'enroute_hospital' | 'at_hospital'
+let phase = 'idle';
+let timeLeft=30, timerInterval=null, jobActive=false;
+
+function startRender(){
+  function loop(){
+    if(canvas.width!==canvas.offsetWidth||canvas.height!==canvas.offsetHeight){resize();initMap();}
+    drawMap();
+    if(routeActive){
+      routeProgress=Math.min(routeProgress+0.0015,1);
+      const idx=Math.floor(routeProgress*(routePath.length-1));
+      if(idx<routePath.length-1){
+        const a=routePath[idx],b=routePath[idx+1],t=(routeProgress*(routePath.length-1))-idx;
+        ambulancePos.x=a.x+(b.x-a.x)*t; ambulancePos.y=a.y+(b.y-a.y)*t;
+      }
+      if(routeProgress>=1){
+        routeActive=false;
+        if(phase==='enroute_scene') arrivedAtScene();
+        else if(phase==='enroute_hospital') arrivedAtHospital();
+      }
+      const rem=Math.round((1-routeProgress)*7);
+      document.getElementById('ov-eta').textContent=rem+':'+(Math.floor(Math.random()*60)).toString().padStart(2,'0');
+      document.getElementById('ov-speed').innerHTML=(Math.round(42+Math.sin(animFrame*.02)*14))+' <span style="font-size:14px">km/h</span>';
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+// ── JOB FLOW ─────────────────────────────────────────────────────
+function startTimer(){
+  clearInterval(timerInterval);
+  jobActive=true;
+  setBtns(false);
+  document.getElementById('timer').style.color='var(--amber)';
+  document.getElementById('timer').classList.remove('urgent');
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    const el=document.getElementById('timer');
+    el.textContent=timeLeft;
+    el.classList.toggle('urgent',timeLeft<=10);
+    if(timeLeft<=0){clearInterval(timerInterval);autoDecline();}
+  },1000);
+}
+
+function setBtns(disabled){
+  document.getElementById('btn-accept').disabled=disabled;
+  document.getElementById('btn-reject').disabled=disabled;
+}
+
+function acceptJob(){
+  if(!jobActive)return;
+  clearInterval(timerInterval); jobActive=false; phase='enroute_scene';
+  setBtns(true);
+  document.getElementById('btn-accept').textContent='ACCEPTED';
+  document.getElementById('timer').textContent='✓';
+  document.getElementById('timer').style.color='var(--green)';
+  document.getElementById('timer').classList.remove('urgent');
+  setStatus('active','En route','MG Road Junction','Now',35);
+  document.getElementById('ov-eta').textContent='7:00';
+  document.getElementById('ov-eta-sub').textContent='MG Road Junction';
+  document.getElementById('ov-speed-sub').textContent='En route';
+  document.getElementById('route-panel').classList.add('visible');
+  routeActive=true; routeProgress=0;
+  ambulancePos={x:routePath[0].x,y:routePath[0].y};
+  document.getElementById('jobs-count').textContent=parseInt(document.getElementById('jobs-count').textContent)+1;
+  showToast('Job accepted — Route locked in');
+  setTimeout(()=>updateSignals(['green','green','green','green']),800);
+  setTimeout(()=>{
+    document.getElementById('reroute-chip').style.display='flex';
+    showToast('Traffic detected — AI rerouting');
+    setTimeout(()=>document.getElementById('reroute-chip').style.display='none',2500);
+  },5000);
+}
+
+function rejectJob(){
+  if(!jobActive)return;
+  clearInterval(timerInterval); jobActive=false;
+  setBtns(true);
+  document.getElementById('timer').textContent='✗';
+  document.getElementById('timer').style.color='var(--red)';
+  setStatus('idle','Standby','Job declined','—',0);
+  showToast('Job declined');
+  setTimeout(loadNewJob,2500);
+}
+
+function autoDecline(){
+  if(!jobActive)return;
+  jobActive=false; setBtns(true);
+  document.getElementById('job-title').textContent='Request timed out';
+  document.getElementById('job-sub').textContent='No response — reassigned';
+  document.getElementById('timer').textContent='!';
+  document.getElementById('timer').style.color='var(--red)';
+  setStatus('idle','Standby','Request expired','—',0);
+  showToast('Timed out — job reassigned');
+  setTimeout(loadNewJob,3000);
+}
+
+function arrivedAtScene(){
+  phase='on_scene';
+  setStatus('active','On scene','Arrived — awaiting pickup','Now',75);
+  document.getElementById('ov-eta').textContent='0:00';
+  document.getElementById('ov-eta-sub').textContent='Arrived at scene';
+  document.getElementById('ov-speed').innerHTML='0 <span style="font-size:14px">km/h</span>';
+  document.getElementById('ov-speed-sub').textContent='On scene';
+  showToast('Arrived at scene — pick up patient');
+  document.getElementById('pickup-wrap').classList.add('visible');
+}
+
+// ── HOSPITAL FLOW ─────────────────────────────────────────────────
+const HOSPITALS=[
+  {name:'Victoria Hospital',  dist:'1.2 km',eta:'3 min',beds:'12 ICU beds',trauma:true, icon:'🏥',tier:'green',pos:{x:.22,y:.28}},
+  {name:'Manipal Hospital',   dist:'2.1 km',eta:'5 min',beds:'8 ICU beds', trauma:true, icon:'🏥',tier:'green',pos:{x:.75,y:.22}},
+  {name:"St. John's Hospital",dist:'2.8 km',eta:'7 min',beds:'4 ICU beds', trauma:false,icon:'🏥',tier:'amber',pos:{x:.80,y:.72}},
+  {name:'Fortis Hospital',    dist:'3.4 km',eta:'9 min',beds:'2 ICU beds', trauma:false,icon:'🏥',tier:'amber',pos:{x:.18,y:.75}},
+];
+
+function patientPickedUp(){
+  const btn=document.getElementById('btn-pickup');
+  btn.disabled=true;
+  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="white" style="animation:spin .8s linear infinite"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 14.96 20 13.54 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 9.04 4 10.46 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Scanning hospitals…';
+  setStatus('active','Patient on board','Scanning nearby hospitals','Now',85);
+  showToast('Patient on board — scanning hospitals');
+  document.getElementById('scan-overlay').classList.add('active');
+  document.getElementById('hosp-label').style.display='';
+  document.getElementById('hosp-wrap').classList.add('visible');
+  document.getElementById('hosp-list').innerHTML='';
+  HOSPITALS.forEach((h,i)=>{
+    setTimeout(()=>{
+      renderHospitalItem(h,i);
+      if(i===HOSPITALS.length-1){
+        document.getElementById('hosp-scanning').textContent='FOUND '+HOSPITALS.length;
+        document.getElementById('hosp-scanning').style.color='var(--green)';
+        document.getElementById('scan-overlay').classList.remove('active');
+        showToast(HOSPITALS.length+' hospitals found — select one');
+        btn.innerHTML='✓ Patient on board';
+        hospitalMarkers=HOSPITALS.map(h=>({...h}));
+      }
+    },600+i*700);
+  });
+}
+
+function renderHospitalItem(h,i){
+  const list=document.getElementById('hosp-list');
+  const div=document.createElement('div');
+  div.className='hosp-item'; div.id='hosp-item-'+i;
+  div.innerHTML=`
+    <div class="hosp-icon ${h.tier}">${h.icon}</div>
+    <div class="hosp-info">
+      <div class="hosp-name">${h.name}</div>
+      <div class="hosp-meta">${h.beds} · ${h.trauma?'🚨 Trauma ready':'⚠️ Standard ER'}</div>
+    </div>
+    <div class="hosp-stat">
+      <div class="hosp-dist">${h.dist}</div>
+      <div class="hosp-beds">${h.eta}</div>
+      <div class="hosp-badge ${h.tier==='green'?'available':'limited'}">${h.tier==='green'?'AVAILABLE':'LIMITED'}</div>
+    </div>`;
+  div.onclick=()=>selectHospital(i,h);
+  list.appendChild(div);
+  requestAnimationFrame(()=>div.classList.add('show'));
+}
+
+function selectHospital(idx,h){
+  document.querySelectorAll('.hosp-item').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('hosp-item-'+idx).classList.add('selected');
+  selectedHospital=h; phase='enroute_hospital';
+  setStatus('active','En route to hospital',h.name,'Now',92);
+  document.getElementById('ov-eta').textContent=h.eta.replace(' min',':00');
+  document.getElementById('ov-eta-sub').textContent=h.name;
+  document.getElementById('ov-speed').innerHTML='52 <span style="font-size:14px">km/h</span>';
+  document.getElementById('ov-speed-sub').textContent='En route to hospital';
+
+  // update route panel
+  document.getElementById('route-panel').classList.add('visible');
+  document.getElementById('route-title').style.color='var(--green)';
+  document.getElementById('route-title').textContent='HOSPITAL ROUTE';
+  document.getElementById('rs1').innerHTML='<div class="route-num" style="background:var(--green);border-color:var(--green);color:#000">1</div><div class="route-text">Depart scene<small>Patient secured</small></div>';
+  document.getElementById('rs2').innerHTML='<div class="route-num">2</div><div class="route-text">AI corridor<small>Signals pre-cleared</small></div>';
+  document.getElementById('rs3').innerHTML='<div class="route-num">3</div><div class="route-text">'+h.name+'<small>ER notified · ETA '+h.eta+'</small></div>';
+
+  // set route to hospital on map
+  targetPos={x:h.pos.x,y:h.pos.y};
+  routePath=[
+    {x:ambulancePos.x,y:ambulancePos.y},
+    {x:(ambulancePos.x+h.pos.x)/2+.05,y:(ambulancePos.y+h.pos.y)/2-.05},
+    {x:h.pos.x,y:h.pos.y}
+  ];
+  routeActive=true; routeProgress=0;
+  updateSignals(['green','green','green','green']);
+  showToast('Routing to '+h.name+' · ER pre-alerted');
+}
+
+function arrivedAtHospital(){
+  // ── THIS IS THE KEY FIX — full reset so Accept works again ──
+  phase='at_hospital';
+  setStatus('active','Patient delivered',selectedHospital?selectedHospital.name:'Hospital','Now',100);
+  document.getElementById('ov-eta').textContent='0:00';
+  document.getElementById('ov-eta-sub').textContent='Patient delivered';
+  document.getElementById('ov-speed').innerHTML='0 <span style="font-size:14px">km/h</span>';
+  document.getElementById('ov-speed-sub').textContent='At hospital';
+  showToast('Patient delivered — ride complete!');
+  setTimeout(loadNewJob, 3500); // full reset after 3.5s
+}
+
+const JOBS=[
+  {title:'Cardiac arrest — Koramangala 5th Block',sub:'Manipal Hosp → 5th Block',dist:'2.8 km',eta:'~5 min',prio:'P1 Critical',prioc:'var(--red)'},
+  {title:'Multi-vehicle accident — Silk Board',sub:"St. John's Hosp → Silk Board Jn",dist:'4.1 km',eta:'~9 min',prio:'P1 Critical',prioc:'var(--red)'},
+  {title:'Stroke patient — Indiranagar',sub:'Hosmat Hosp → 100ft Road',dist:'1.6 km',eta:'~4 min',prio:'P2 Urgent',prioc:'var(--amber)'},
+  {title:'Pedestrian hit — Whitefield',sub:'Narayana Hosp → ITPL Main Rd',dist:'5.3 km',eta:'~12 min',prio:'P1 Critical',prioc:'var(--red)'},
+];
+
+function loadNewJob(){
+  // reset everything fully
+  phase='idle'; routeActive=false; routeProgress=0;
+  ambulancePos={x:.35,y:.6}; targetPos={x:.65,y:.35};
+  hospitalMarkers=[]; selectedHospital=null;
+  timeLeft=30;
+
+  const j=JOBS[Math.floor(Math.random()*JOBS.length)];
+  document.getElementById('job-title').textContent=j.title;
+  document.getElementById('job-sub').textContent=j.sub;
+  document.getElementById('chip-dist').textContent=j.dist;
+  document.getElementById('chip-eta').textContent=j.eta;
+  document.getElementById('chip-prio').textContent=j.prio;
+  document.getElementById('chip-prio').style.color=j.prioc;
+  document.getElementById('timer').textContent='30';
+  document.getElementById('timer').style.color='var(--amber)';
+  document.getElementById('timer').classList.remove('urgent');
+
+  // reset buttons
+  document.getElementById('btn-accept').disabled=false;
+  document.getElementById('btn-accept').textContent='ACCEPT';
+  document.getElementById('btn-reject').disabled=false;
+
+  // hide all post-ride UI
+  document.getElementById('route-panel').classList.remove('visible');
+  document.getElementById('route-title').textContent='ACTIVE ROUTE';
+  document.getElementById('route-title').style.color='var(--cyan)';
+  document.getElementById('pickup-wrap').classList.remove('visible');
+  document.getElementById('btn-pickup').disabled=false;
+  document.getElementById('btn-pickup').innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg> Patient Picked Up';
+  document.getElementById('hosp-wrap').classList.remove('visible');
+  document.getElementById('hosp-label').style.display='none';
+  document.getElementById('hosp-list').innerHTML='';
+  document.getElementById('hosp-scanning').textContent='SCANNING…';
+  document.getElementById('hosp-scanning').style.color='var(--cyan)';
+  document.getElementById('scan-overlay').classList.remove('active');
+  document.getElementById('reroute-chip').style.display='none';
+  document.getElementById('ov-eta').textContent='—';
+  document.getElementById('ov-eta-sub').textContent='Waiting for dispatch';
+  document.getElementById('ov-speed').innerHTML='0 <span style="font-size:14px">km/h</span>';
+  document.getElementById('ov-speed-sub').textContent='Unit stationary';
+
+  // restore route steps
+  document.getElementById('rs1').innerHTML='<div class="route-num">1</div><div class="route-text">Victoria Hospital exit<small>Turn right on Hosur Rd</small></div>';
+  document.getElementById('rs2').innerHTML='<div class="route-num">2</div><div class="route-text">Silk Board flyover<small>Keep left, stay on ORR</small></div>';
+  document.getElementById('rs3').innerHTML='<div class="route-num">3</div><div class="route-text">MG Road junction<small>Destination on right</small></div>';
+
+  updateSignals(['green','green','amber','green']);
+  setStatus('idle','Standby','New job incoming','—',0);
+  startTimer(); // re-enables accept/decline and starts countdown
+}
+
+function setStatus(dotClass,name,sub,time,prog){
+  document.getElementById('s-dot').className='s-dot '+dotClass;
+  document.getElementById('s-name').textContent=name;
+  document.getElementById('s-sub').textContent=sub;
+  document.getElementById('s-time').textContent=time;
+  document.getElementById('prog-fill').style.width=prog+'%';
+}
+function updateSignals(states){
+  document.getElementById('signals-grid').querySelectorAll('.sig-dot')
+    .forEach((d,i)=>d.className='sig-dot '+(states[i]||'red'));
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+function tick(){ document.getElementById('time-chip').textContent=new Date().toLocaleTimeString('en-IN',{hour12:false}); }
+setInterval(tick,1000); tick();
+
+// ── INIT ─────────────────────────────────────────────────────────
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    document.getElementById('loader-title').textContent='SURAKSHAPATH AI';
+    document.getElementById('loader-title').style.fontSize='30px';
+    document.getElementById('loader-title').style.letterSpacing='6px';
+    document.getElementById('loader-title').style.textShadow='0 0 50px rgba(255,45,45,0.8)';
+    document.getElementById('loader-sub').textContent='Emergency dispatch system ready';
+    document.getElementById('loader-sub').style.color='#22c55e';
+    setTimeout(()=>{
+      document.getElementById('loader').classList.add('gone');
+      initMap(); startRender();
+      setTimeout(()=>{
+        document.getElementById('b1').style.width='96%';
+        document.getElementById('b2').style.width='78%';
+        document.getElementById('b3').style.width='91%';
+        document.getElementById('b4').style.width='88%';
+      },400);
+      loadNewJob();
+    },900);
+  },1800);
+});
+</script>
+<script>
+const API = 'http://localhost:3001/api';
+let SESSION_DRIVER_ID = null;
+let SESSION_JOB_ID = null;
+
+// ── STEP 1: Login as demo driver on page load ──────────────
+async function initDriverSession() {
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        phone: '9876543210',
+        role: 'driver',
+        password: 'driver123'
+      })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      SESSION_DRIVER_ID = data.driver.id;
+
+      // Update the UI with real driver name
+      document.querySelector('.unit-name').textContent = data.driver.name;
+      document.querySelector('.unit-id').textContent =
+        `UNIT ${data.driver.vehicleNumber} · Zone South`;
+
+      // Update stats
+      document.querySelectorAll('.stat-box .val')[0].textContent = data.driver.rating;
+      document.querySelectorAll('.stat-box .val')[1].textContent = data.driver.totalJobs;
+
+      console.log('✅ Logged in as:', data.driver.name);
+
+      // Now load a real job
+      await loadRealJob();
+    }
+  } catch (err) {
+    console.error('Login failed:', err);
+    // Falls back to existing fake UI — no crash
+  }
+}
+
+// ── STEP 2: Pull a real job from your dispatch engine ──────
+async function loadRealJob() {
+  if (!SESSION_DRIVER_ID) return;
+  try {
+    const res = await fetch(`${API}/dispatch/next-job/${SESSION_DRIVER_ID}`);
+    const data = await res.json();
+
+    if (data.success && data.job) {
+         SESSION_JOB_ID = data.job.id;
+      document.getElementById('job-title').textContent = data.job.title;
+      document.getElementById('job-sub').textContent   = data.job.sub;
+      document.getElementById('chip-dist').textContent = data.job.dist;
+      document.getElementById('chip-eta').textContent  = data.job.eta;
+      document.getElementById('chip-prio').textContent = data.job.priorityLabel || 'P1 Critical';
+      console.log('📋 Real job loaded:', data.job.title);
+    }
+  } catch (err) {
+    console.error('Job load failed — using fallback UI');
+  }
+}
+
+// ── STEP 3: Tell your backend when driver accepts ──────────
+const _originalAccept = window.acceptJob;
+window.acceptJob = async function () {
+  _originalAccept?.(); // run Member 2's original animation
+  if (!SESSION_DRIVER_ID) return;
+  try {
+    await fetch(`${API}/dispatch/accept`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+  driverId: SESSION_DRIVER_ID,
+  jobId: SESSION_JOB_ID        // ← add this
+})
+    });
+    console.log('✅ Accept sent to backend');
+  } catch (err) {
+    console.error('Accept sync failed (UI still works)');
+  }
+};
+
+// ── STEP 4: Tell your backend when driver skips ───────────
+const _originalReject = window.rejectJob;
+window.rejectJob = async function () {
+  if (!SESSION_DRIVER_ID) {
+    _originalReject?.();
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/dispatch/skip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ driverId: SESSION_DRIVER_ID })
+    });
+    const data = await res.json();
+
+    if (data.forcedOffline) {
+      showToast('3 skips reached — you are now offline');
+    } else {
+      showToast(`Job declined · Score -5 · (${data.newSkipCount}/3 skips)`);
+    }
+  } catch (err) {
+    // silent fail — original UI still runs
+  }
+  _originalReject?.();
+};
+
+// ── STEP 5: Push GPS location to your server every 4 sec ──
+function startGPSPush() {
+  if (!SESSION_DRIVER_ID) return;
+  setInterval(async () => {
+    // Grab ambulance position from the canvas simulation
+    const lat = 12.9716 + (ambulancePos.y - 0.5) * 0.05;
+    const lng = 77.5946 + (ambulancePos.x - 0.5) * 0.05;
+    try {
+      await fetch(`${API}/gps/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          driverId: SESSION_DRIVER_ID,
+          lat, lng,
+          speed: routeActive ? 45 : 0
+        })
+      });
+    } catch (err) { /* silent — GPS push is non-critical */ }
+  }, 4000);
+}
+
+// ── START everything after the page finishes loading ───────
+const _originalLoad = window.onload;
+window.addEventListener('load', async () => {
+  await initDriverSession();
+  startGPSPush();
+});
+</script>
+</body>
+</html>
