@@ -1,7 +1,11 @@
-{
+
+  {
   "name": "surakshapath-backend",
   "version": "1.0.0",
-  "description": "SurakshaPath AI — Backend API (Member 3: Auth + Dispatch + GPS)",
+  "engines": {
+    "node": "18.x"
+  },
+  "description": "SurakshaPath AI — Backend API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
