@@ -179,12 +179,35 @@ router.post('/accept', (req, res) => {
   });
 });
 // Send hospital pre-alert via M4
-await m4.sendHospitalPrealert(
-  jobId,
-  'Manipal Hospital Bengaluru',  // later: use nearest hospital from job data
-  job.emergencyType || 'Accident',
-  Math.round((job.eta || 360) / 60)  // convert seconds to minutes
-)
+// M4 stub — Supabase integration pending
+// These functions do nothing until Member 4 connects their Supabase
+
+async function sendHospitalPrealert(...args) {
+  console.log('M4 stub: sendHospitalPrealert called');
+  return { success: true };
+}
+
+async function reportSkipPenalty(...args) {
+  console.log('M4 stub: reportSkipPenalty called');
+  return { success: true };
+}
+
+async function calculateDriverScore(...args) {
+  console.log('M4 stub: calculateDriverScore called');
+  return { total_score: 78, tier: 'Silver' };
+}
+
+async function updateBadgeStreak(...args) {
+  console.log('M4 stub: updateBadgeStreak called');
+  return { badge: 'on_time' };
+}
+
+module.exports = {
+  sendHospitalPrealert,
+  reportSkipPenalty,
+  calculateDriverScore,
+  updateBadgeStreak
+};
 
 // ══════════════════════════════════════════════════════════
 //  POST /api/dispatch/skip
@@ -214,8 +237,35 @@ router.post('/skip', (req, res) => {
   });
 });
 // Tell M4 about the skip — they track penalties and auto-offline
-const skipResult = await m4.reportSkipPenalty(driverId, jobId)
-console.log('M4 skip result:', skipResult)
+// M4 stub — Supabase integration pending
+// These functions do nothing until Member 4 connects their Supabase
+
+async function sendHospitalPrealert(...args) {
+  console.log('M4 stub: sendHospitalPrealert called');
+  return { success: true };
+}
+
+async function reportSkipPenalty(...args) {
+  console.log('M4 stub: reportSkipPenalty called');
+  return { success: true };
+}
+
+async function calculateDriverScore(...args) {
+  console.log('M4 stub: calculateDriverScore called');
+  return { total_score: 78, tier: 'Silver' };
+}
+
+async function updateBadgeStreak(...args) {
+  console.log('M4 stub: updateBadgeStreak called');
+  return { badge: 'on_time' };
+}
+
+module.exports = {
+  sendHospitalPrealert,
+  reportSkipPenalty,
+  calculateDriverScore,
+  updateBadgeStreak
+};
 
 // If M4 says OFFLINE — reflect that in our db too
 if (skipResult === 'OFFLINE') {
@@ -291,8 +341,35 @@ router.post('/arrived', (req, res) => {
   });
 });
 // Calculate score and badge — fire both together
-const score  = await m4.calculateDriverScore(driverId)
-const badge  = await m4.updateBadgeStreak(driverId)
+// M4 stub — Supabase integration pending
+// These functions do nothing until Member 4 connects their Supabase
+
+async function sendHospitalPrealert(...args) {
+  console.log('M4 stub: sendHospitalPrealert called');
+  return { success: true };
+}
+
+async function reportSkipPenalty(...args) {
+  console.log('M4 stub: reportSkipPenalty called');
+  return { success: true };
+}
+
+async function calculateDriverScore(...args) {
+  console.log('M4 stub: calculateDriverScore called');
+  return { total_score: 78, tier: 'Silver' };
+}
+
+async function updateBadgeStreak(...args) {
+  console.log('M4 stub: updateBadgeStreak called');
+  return { badge: 'on_time' };
+}
+
+module.exports = {
+  sendHospitalPrealert,
+  reportSkipPenalty,
+  calculateDriverScore,
+  updateBadgeStreak
+};
 
 console.log(`🏆 Driver score: ${score?.total_score} → ${score?.tier}`)
 console.log(`🔥 Badge: ${badge}`)
